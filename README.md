@@ -4,7 +4,7 @@ Simulação baseada em agentes, em Python e Mesa, de uma única cidade. Pergunta
 
 ## Estado atual
 
-Cenário inicial sem redistribuição: estações reais, pedidos sintéticos, viagens e devoluções. Ainda não inclui veículos, manutenção, preços, meteorologia ou interface gráfica.
+Cenário inicial sem redistribuição: estações reais, pedidos sintéticos, viagens e devoluções. Inclui uma primeira interface gráfica Mesa/Solara. Ainda não inclui veículos, manutenção, preços ou meteorologia.
 
 ## Dados
 
@@ -41,6 +41,20 @@ Se `venv` já existir, não é necessário recriá-lo. Usa-se Mesa 3.3.1, a vers
 | `--output` | results/baseline | Diretório de saída |
 
 Reutilizar um diretório de saída substitui os resultados anteriores. Para comparar cenários, escolhe diretórios diferentes.
+
+## Interface gráfica Mesa
+
+Depois de instalar as dependências, executa na raiz do projeto:
+
+```powershell
+.\venv\Scripts\solara.exe run app.py
+```
+
+Abre http://localhost:8765 no navegador. A interface usa o SolaraViz do Mesa, com Play/Pause, Step e Reset. Cada passo representa um minuto. Podes ajustar a ocupação inicial, procura, velocidade e semente; usa Reset para aplicar os parâmetros a uma nova simulação.
+
+Inclui uma vista das estações por latitude/longitude (sem mapa de ruas), cores pela ocupação, tamanho pela capacidade, tabela das estações, indicadores e gráficos da procura acumulada e da distribuição da frota. Os números na vista correspondem às linhas da tabela. A cidade inicial continua a ser 442.
+
+A interface executa uma nova simulação em memória; os CSV de `results/baseline` continuam a ser gerados pelo comando `main.py`.
 
 ## Modelo e pressupostos
 
@@ -90,6 +104,7 @@ Executar os testes:
 ## Organização
 
 ```text
+app.py                  # Interface interativa Mesa/Solara
 main.py                 # Comandos e resumo da execução
 bike_sharing/model.py   # Modelo, agentes e exportação
 data/stations.csv       # Dataset original
