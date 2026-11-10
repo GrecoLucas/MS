@@ -16,12 +16,12 @@ def Overview(model):
     update_counter.get()
     rate = f'{model.served / model.requests:.1%}' if model.requests else '—'
     solara.Markdown(
-        f'### Minuto {model.minute} · Cidade {model.city_id}\n'
-        f'**Frota:** {model.fleet_size} · **Pedidos:** {model.requests} · '
-        f'**Procura satisfeita:** {rate} · '
-        f'**Viagens em curso:** {model.served - model.completed_trips}\n\n'
-        'Cada passo corresponde a um minuto. Procura sintética e uniforme; '
-        'cenário sem redistribuição. Altera os parâmetros e reinicia com Reset.'
+        f'### Minute {model.minute} · City {model.city_id}\n'
+        f'**Fleet:** {model.fleet_size} · **Requests:** {model.requests} · '
+        f'**Demand met:** {rate} · '
+        f'**Trips in progress:** {model.served - model.completed_trips}\n\n'
+        'Each step represents one minute. Synthetic, uniform demand; '
+        'scenario without rebalancing. Change the parameters and restart with Reset.'
     )
 
 
@@ -40,32 +40,32 @@ def StationMap(model):
     for number, station in enumerate(stations, start=1):
         ax.annotate(str(number), (station.lon, station.lat),
                     xytext=(5, 5), textcoords='offset points', fontsize=8)
-    ax.set(title='Estações · tamanho = capacidade', xlabel='Longitude', ylabel='Latitude')
+    ax.set(title='Stations · size = capacity', xlabel='Longitude', ylabel='Latitude')
     ax.set_aspect(1 / max(0.01, math.cos(math.radians(stations[0].lat))))
     ax.ticklabel_format(useOffset=False, style='plain')
-    figure.colorbar(points, ax=ax, label='Ocupação (0 = vazia; 1 = cheia)')
+    figure.colorbar(points, ax=ax, label='Occupancy (0 = empty; 1 = full)')
     solara.FigureMatplotlib(figure)
 
 
 @solara.component
 def StationTable(model):
     update_counter.get()
-    solara.Markdown('### Estado das estações\nOs números correspondem à vista geográfica.')
+    solara.Markdown('### Station status\nThe numbers correspond to the map view.')
     solara.DataFrame(pd.DataFrame([
-        {'N.º': number, 'Estação': s.name, 'Bicicletas': s.bikes,
-         'Capacidade': s.capacity, 'Ocupação (%)': round(100 * s.bikes / s.capacity, 1),
-         'Pedidos': s.requests, 'Falhas de levantamento': s.failed_pickups,
-         'Falhas de devolução': s.failed_returns}
+        {'No.': number, 'Station': s.name, 'Bikes': s.bikes,
+         'Capacity': s.capacity, 'Occupancy (%)': round(100 * s.bikes / s.capacity, 1),
+         'Requests': s.requests, 'Failed pickups': s.failed_pickups,
+         'Failed returns': s.failed_returns}
         for number, s in enumerate(model.stations, start=1)
     ]), items_per_page=15)
 
 
 def demand_axes(ax):
-    ax.set(title='Procura acumulada', xlabel='Minuto', ylabel='Pedidos / levantamentos')
+    ax.set(title='Cumulative demand', xlabel='Minute', ylabel='Requests / pickups')
 
 
 def fleet_axes(ax):
-    ax.set(title='Distribuição da frota', xlabel='Minuto', ylabel='Bicicletas')
+    ax.set(title='Fleet distribution', xlabel='Minute', ylabel='Bikes')
 
 
 @solara.component
@@ -84,12 +84,12 @@ def Page():
         ],
         model_params={
             'city_id': '442',
-            'occupancy': Slider('Ocupação inicial', 0.5, min=0.0, max=1.0, step=0.05),
-            'demand_rate': Slider('Pedidos / estação / minuto', 0.02,
+            'occupancy': Slider('Initial occupancy', 0.5, min=0.0, max=1.0, step=0.05),
+            'demand_rate': Slider('Requests / station / minute', 0.02,
                                   min=0.0, max=0.5, step=0.01),
-            'speed_kmh': Slider('Velocidade (km/h)', 15, min=1, max=30, step=1),
-            'seed': Slider('Semente aleatória', 42, min=0, max=1000, step=1),
+            'speed_kmh': Slider('Speed (km/h)', 15, min=1, max=30, step=1),
+            'seed': Slider('Random seed', 42, min=0, max=1000, step=1),
         },
-        name='Bike Sharing · Simulação Mesa',
+        name='Bike Sharing · Mesa Simulation',
         play_interval=200,
     )
