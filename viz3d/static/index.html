@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bike Sharing · 3D simulation</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    {"imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }}
+  </script>
+</head>
+<body>
+  <canvas id="scene"></canvas>
+
+  <header id="topbar" class="panel">
+    <div class="clock">
+      <strong id="clock">--:--</strong>
+      <span id="daytype" class="chip">weekday</span>
+      <span id="weather" class="chip">clear</span>
+      <span id="demand" class="chip" title="Requests per hour right now">0 req/h</span>
+    </div>
+    <div class="transport">
+      <button id="play" class="primary" title="Space">Pause</button>
+      <button id="step" title="Advance one minute">+1 min</button>
+      <div class="segmented" id="speeds" title="Simulated minutes per second">
+        <button data-speed="1">1×</button>
+        <button data-speed="5" class="on">5×</button>
+        <button data-speed="20">20×</button>
+        <button data-speed="60">60×</button>
+        <button data-speed="240">240×</button>
+      </div>
+      <button id="toggle-scenario" class="ghost">Scenario</button>
+      <button id="toggle-indicators" class="ghost">Indicators</button>
+    </div>
+  </header>
+
+  <aside id="scenario" class="panel side left">
+    <h2>Scenario</h2>
+    <div class="presets" id="presets"></div>
+    <form id="form">
+      <label>Rebalancing policy
+        <select name="rebalancing">
+          <option value="none">No rebalancing</option>
+          <option value="periodic">Periodic rounds (every 6 h)</option>
+          <option value="threshold">Threshold (reactive)</option>
+          <option value="predictive">Predictive (demand forecast)</option>
+        </select>
+      </label>
+      <label>Fleet size <output data-for="occupancy"></output>
+        <input type="range" name="occupancy" min="0.1" max="0.9" step="0.05">
+      </label>
+      <label>Rebalancing vans <output data-for="vehicles"></output>
+        <input type="range" name="vehicles" min="0" max="3" step="1">
+      </label>
+      <label>Demand <output data-for="demand_rate"></output>
+        <input type="range" name="demand_rate" min="0.01" max="0.1" step="0.005">
+      </label>
+      <label>Incentive discount <output data-for="incentive_discount"></output>
+        <input type="range" name="incentive_discount" min="0" max="0.8" step="0.1">
+      </label>
+      <label>Weather
+        <select name="weather">
+          <option value="dynamic">Dynamic (random)</option>
+          <option value="clear">Always clear</option>
+          <option value="cloudy">Always cloudy</option>
+          <option value="rain">Always rain</option>
+        </select>
+      </label>
+      <label>Mean temperature <output data-for="mean_temperature"></output>
+        <input type="range" name="mean_temperature" min="-5" max="35" step="1">
+      </label>
+      <details>
+        <summary>More options</summary>
+        <label>Virtual parking zones <output data-for="virtual_zones"></output>
+          <input type="range" name="virtual_zones" min="0" max="4" step="1">
+        </label>
+        <label>Station capacity <output data-for="capacity_scale"></output>
+          <input type="range" name="capacity_scale" min="0.5" max="2" step="0.25">
+        </label>
+        <label>Bike failures <output data-for="failure_rate"></output>
+          <input type="range" name="failure_rate" min="0" max="0.03" step="0.002">
+        </label>
+        <label>Price per minute <output data-for="price_minute"></output>
+          <input type="range" name="price_minute" min="0" max="0.2" step="0.01">
+        </label>
+        <label>First day
+          <select name="start_weekday">
+            <option value="0">Monday</option><option value="4">Friday</option>
+            <option value="5">Saturday</option><option value="6">Sunday</option>
+          </select>
+        </label>
+        <label>Random seed
+          <input type="number" name="seed" min="0" max="999999" step="1">
+        </label>
+      </details>
+      <button type="submit" class="primary wide">Restart with these settings</button>
+    </form>
+  </aside>
+
+  <aside id="indicators" class="panel side right">
+    <h2>Indicators</h2>
+    <div class="hero">
+      <div><span id="k-service" class="big">–</span><small>demand served</small></div>
+      <canvas id="chart-service" width="260" height="56"></canvas>
+    </div>
+    <dl class="grid">
+      <div><dt>Requests</dt><dd id="k-requests">0</dd></div>
+      <div><dt>Unmet demand</dt><dd id="k-unmet">0</dd></div>
+      <div><dt>Avg wait</dt><dd id="k-wait">–</dd></div>
+      <div><dt>Extra walking</dt><dd id="k-walk">–</dd></div>
+      <div><dt>Bikes in use</dt><dd id="k-inuse">0</dd></div>
+      <div><dt>Users waiting</dt><dd id="k-waiting">0</dd></div>
+      <div><dt>Full-station detours</dt><dd id="k-redirected">0</dd></div>
+      <div><dt>Broken bikes</dt><dd id="k-broken">0</dd></div>
+      <div><dt>Bikes rebalanced</dt><dd id="k-moved">0</dd></div>
+      <div><dt>Van distance</dt><dd id="k-km">0 km</dd></div>
+    </dl>
+    <canvas id="chart-use" width="260" height="56"></canvas>
+    <small class="caption">Bikes in use (blue) and users waiting (red)</small>
+    <h3>Money</h3>
+    <dl class="grid">
+      <div><dt>Revenue</dt><dd id="k-revenue">€0</dd></div>
+      <div><dt>Operating cost</dt><dd id="k-opcost">€0</dd></div>
+      <div><dt>Maintenance</dt><dd id="k-maint">€0</dd></div>
+      <div><dt>Profit</dt><dd id="k-profit">€0</dd></div>
+    </dl>
+    <h3>Equity: demand served by area</h3>
+    <div id="zones" class="zones"></div>
+  </aside>
+
+  <div id="legend" class="panel">
+    <span><i style="background:#22c55e"></i>balanced</span>
+    <span><i style="background:#f59e0b"></i>few bikes</span>
+    <span><i style="background:#ef4444"></i>empty</span>
+    <span><i style="background:#3b82f6"></i>almost full</span>
+    <span><i style="background:#8b5cf6"></i>full</span>
+    <span><i class="dot" style="background:#2563eb"></i>commuter</span>
+    <span><i class="dot" style="background:#f59e0b"></i>casual rider</span>
+    <span><i class="dot" style="background:#e11d48"></i>broken bike</span>
+  </div>
+
+  <div id="tooltip" hidden></div>
+  <div id="card" class="panel" hidden></div>
+  <div id="error" class="panel" hidden></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
